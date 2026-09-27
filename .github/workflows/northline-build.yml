@@ -18,14 +18,22 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Install Blender
-        run: sudo apt-get update -qq && sudo apt-get install -y blender
+      - name: Install pinned Blender renderer
+        run: |
+          curl --fail --location --retry 3 -o blender.tar.xz https://download.blender.org/release/Blender4.2/blender-4.2.15-linux-x64.tar.xz
+          curl --fail --location --retry 3 -o blender.sha256 https://download.blender.org/release/Blender4.2/blender-4.2.15.sha256
+          expected=$(grep 'blender-4.2.15-linux-x64.tar.xz' blender.sha256 | cut -d ' ' -f 1)
+          test -n "$expected"
+          echo "$expected  blender.tar.xz" | sha256sum --check
+          tar -xf blender.tar.xz
+          echo "$PWD/blender-4.2.15-linux-x64" >> "$GITHUB_PATH"
       - name: Render matched camera pairs
-        run: blender -b -t 4 -P tools/render_architecture.py -- --project ${{ matrix.project }} --samples 96 --output rendered
+        run: blender -b -t 4 --python-exit-code 1 -P tools/render_architecture.py -- --project ${{ matrix.project }} --samples 96 --output rendered
       - uses: actions/upload-artifact@v4
         with:
           name: architecture-${{ matrix.project }}
           path: rendered/
+          if-no-files-found: error
           retention-days: 7
   publish:
     needs: render

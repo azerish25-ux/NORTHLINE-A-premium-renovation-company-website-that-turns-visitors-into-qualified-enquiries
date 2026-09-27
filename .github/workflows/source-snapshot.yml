@@ -1,0 +1,22 @@
+name: Source snapshot
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PHP syntax
+        run: find plugins theme -name '*.php' -print0 2>/dev/null | xargs -0 -r -n1 php -l
+      - uses: actions/upload-artifact@v4
+        with:
+          name: northline-source
+          path: |
+            plugins/
+            theme/
+            tools/
+            tests/
+            docs/
+            README.md
+          retention-days: 14
