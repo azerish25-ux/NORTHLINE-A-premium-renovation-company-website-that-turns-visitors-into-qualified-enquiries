@@ -1,0 +1,90 @@
+name: northline-local
+x-wp-environment: &wp-environment
+  WORDPRESS_DB_HOST: db:3306
+  WORDPRESS_DB_NAME: northline
+  WORDPRESS_DB_USER: northline
+  WORDPRESS_DB_PASSWORD: ${NORTHLINE_DB_PASSWORD:-northline-local-database-only}
+  NORTHLINE_LOCAL_MAIL: '1'
+  WORDPRESS_CONFIG_EXTRA: |
+    define('WP_ENVIRONMENT_TYPE', 'local');
+services:
+  db:
+    image: mariadb:11.4
+    environment:
+      MARIADB_DATABASE: northline
+      MARIADB_USER: northline
+      MARIADB_PASSWORD: ${NORTHLINE_DB_PASSWORD:-northline-local-database-only}
+      MARIADB_ROOT_PASSWORD: ${NORTHLINE_ROOT_PASSWORD:-northline-local-root-only}
+    volumes:
+      - database:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  wordpress:
+    image: wordpress:php8.3-apache
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:8080:80'
+    environment: *wp-environment
+    volumes:
+      - wordpress:/var/www/html
+      - ../../theme/northline:/var/www/html/wp-content/themes/northline:ro
+      - ../../plugins/northline-planner:/var/www/html/wp-content/plugins/northline-planner:ro
+      - ./mailpit.php:/var/www/html/wp-content/mu-plugins/northline-local-mail.php:ro
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '127.0.0.1:8025:8025'
+  bootstrap:
+    image: wordpress:cli
+    user: '33:33'
+    depends_on:
+      wordpress:
+        condition: service_started
+    environment:
+      <<: *wp-environment
+      NORTHLINE_ADMIN_PASSWORD: ${NORTHLINE_ADMIN_PASSWORD:-Northline-Local-Only-ChangeMe}
+    volumes:
+      - wordpress:/var/www/html
+      - ../../theme/northline:/var/www/html/wp-content/themes/northline:ro
+      - ../../plugins/northline-planner:/var/www/html/wp-content/plugins/northline-planner:ro
+      - ./mailpit.php:/var/www/html/wp-content/mu-plugins/northline-local-mail.php:ro
+    entrypoint: ['/bin/sh', '-ec']
+    command:
+      - |
+        count=0
+        until test -f wp-includes/version.php; do
+          count=$$((count + 1))
+          test "$$count" -lt 90 || exit 1
+          sleep 2
+        done
+        if ! wp core is-installed; then
+          wp core install --url=http://localhost:8080 --title=NORTHLINE --admin_user=studio --admin_password="$$NORTHLINE_ADMIN_PASSWORD" --admin_email=studio@example.test --skip-email
+        fi
+        wp plugin activate northline-planner
+        wp theme activate northline
+        wp option update timezone_string America/Halifax
+        wp rewrite structure '/%postname%/' --hard
+        wp northline seed
+        echo 'NORTHLINE: http://localhost:8080 | Staff: /wp-admin | Test inbox: http://localhost:8025'
+  cli:
+    image: wordpress:cli
+    profiles: ['tools']
+    user: '33:33'
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *wp-environment
+    volumes:
+      - wordpress:/var/www/html
+      - ../../theme/northline:/var/www/html/wp-content/themes/northline:ro
+      - ../../plugins/northline-planner:/var/www/html/wp-content/plugins/northline-planner:ro
+      - ./mailpit.php:/var/www/html/wp-content/mu-plugins/northline-local-mail.php:ro
+    entrypoint: ['wp']
+volumes:
+  database:
+  wordpress:
