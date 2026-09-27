@@ -1,0 +1,33 @@
+{
+  "project": "harbour-house",
+  "type": "Original fictional architectural visualisation",
+  "renderer": "Blender Cycles",
+  "states": {
+    "after": {
+      "location": [
+        1.4,
+        -7,
+        2.18
+      ],
+      "target": [
+        0,
+        0.65,
+        1.25
+      ],
+      "lens_mm": 31
+    },
+    "before": {
+      "location": [
+        1.4,
+        -7,
+        2.18
+      ],
+      "target": [
+        0,
+        0.65,
+        1.25
+      ],
+      "lens_mm": 31
+    }
+  }
+}

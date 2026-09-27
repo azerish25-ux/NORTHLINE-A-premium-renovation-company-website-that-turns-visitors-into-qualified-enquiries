@@ -1,0 +1,33 @@
+{
+  "project": "courtyard-house",
+  "type": "Original fictional architectural visualisation",
+  "renderer": "Blender Cycles",
+  "states": {
+    "after": {
+      "location": [
+        8.8,
+        -12.6,
+        3.4
+      ],
+      "target": [
+        0,
+        -0.1,
+        1.5
+      ],
+      "lens_mm": 36
+    },
+    "before": {
+      "location": [
+        8.8,
+        -12.6,
+        3.4
+      ],
+      "target": [
+        0,
+        -0.1,
+        1.5
+      ],
+      "lens_mm": 36
+    }
+  }
+}
