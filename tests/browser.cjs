@@ -1,0 +1,133 @@
+/* Browser acceptance tests. Run against isolated WordPress and the static preview. */
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { chromium } = require('playwright');
+const ROOT = path.resolve(__dirname, '..');
+const evidence = path.join(ROOT, 'evidence');
+fs.mkdirSync(evidence, { recursive: true });
+let assertions = 0;
+const check = (condition, label) => { assert.ok(condition, label); assertions++; console.log('PASS ' + label); };
+async function visible(locator) { await locator.waitFor({ state: 'visible', timeout: 20000 }); }
+async function planner(page, base, demo) {
+  await page.goto(base + '/plan-your-renovation/');
+  await visible(page.getByRole('heading', { name: 'What are you imagining?' }));
+  await page.getByRole('button', { name: 'Continue →', exact: true }).click();
+  await visible(page.getByText('Choose one of the available options.', { exact: true }));
+  check(true, (demo ? 'demo' : 'WordPress') + ' invalid form input is explained');
+  await page.locator('input[name="type"][value="kitchen"]').check();
+  await page.getByRole('button', { name: 'Continue →', exact: true }).click();
+  await page.locator('#field-propertySize').fill('1800');
+  await page.locator('#field-area').fill('200');
+  await page.getByRole('button', { name: 'Continue →', exact: true }).click();
+  await page.locator('input[name="finish"][value="considered"]').check();
+  await page.locator('#field-timeline').selectOption('6-12');
+  await page.locator('#field-budget').selectOption('100-200');
+  await page.getByRole('button', { name: 'Continue →', exact: true }).click();
+  await page.locator('#field-priorities').fill('Improve daylight, circulation and storage. Keep the garden view and make room for family meals.');
+  await page.locator('#nl-references').setInputFiles({ name: 'unsafe.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>') });
+  await visible(page.getByRole('alert'));
+  check((await page.getByRole('alert').innerText()).includes('JPEG'), 'unsupported reference is rejected with a useful explanation');
+  await page.locator('#nl-references').setInputFiles(path.join(ROOT, 'theme/northline/assets/images/birch-house-after.jpg'));
+  await visible(page.locator('.nl-reference-list li').first());
+  await page.getByRole('button', { name: 'Continue →', exact: true }).click();
+  await page.locator('#field-name').fill(demo ? 'Alex Browser Demo' : 'Alex WordPress Test');
+  await page.locator('#field-email').fill('invalid');
+  await page.locator('#field-town').fill('Fictional Test Town');
+  await page.locator('input[name="consent"]').check();
+  await page.getByRole('button', { name: 'Continue →', exact: true }).click();
+  await visible(page.locator('#error-email'));
+  check((await page.locator('#error-email').innerText()).includes('valid email'), 'invalid email does not advance the form');
+  await page.locator('#field-email').fill(demo ? 'demo@example.com' : 'wordpress-browser@example.com');
+  await page.getByRole('button', { name: 'Continue →', exact: true }).click();
+  await visible(page.getByRole('heading', { name: 'A clear place to begin.' }));
+  check((await page.locator('.nl-price').innerText()).includes('75,000 – 114,000'), 'browser and PHP illustrative calculation agree');
+  if (demo) await page.locator('#nl-simulate-failure').check();
+  await page.waitForTimeout(2200);
+  await page.getByRole('button', { name: 'Save my project brief ↗', exact: true }).click();
+  await visible(page.getByRole('heading', { name: 'A considered beginning.' }));
+  await page.waitForFunction(() => document.querySelector('.nl-receipt .nl-help')?.textContent.includes('1 image(s) saved'), null, { timeout: 20000 });
+  check(true, 'brief and valid reference are saved before booking');
+  const credential = await page.evaluate(() => JSON.parse(sessionStorage.getItem('nl-private')));
+  check(credential.id.length === 24 && credential.token.length === 64, 'private receipt credential has expected entropy format');
+  if (!demo) {
+    const denied = await page.request.get(base + '/wp-json/northline/v1/brief/' + credential.id);
+    check(denied.status() === 403, 'unauthenticated private brief request is denied');
+    const rejected = await page.request.post(base + '/wp-json/northline/v1/brief/' + credential.id + '/references', { headers: { Authorization: 'Bearer ' + credential.token }, multipart: { reference: { name: 'unsafe.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>') } } });
+    check(rejected.status() === 422, 'server independently rejects unsafe reference types');
+    const retained = await page.request.get(base + '/wp-json/northline/v1/brief/' + credential.id, { headers: { Authorization: 'Bearer ' + credential.token } });
+    check(retained.status() === 200, 'failed upload leaves the real enquiry saved');
+  } else check((await page.locator('.nl-receipt .nl-notice').innerText()).includes('email failure'), 'simulated email failure leaves demo brief saved');
+  await visible(page.locator('input[name="slot"]').first());
+  await page.locator('input[name="slot"]').first().check();
+  await page.getByRole('button', { name: 'Reserve this consultation ↗', exact: true }).click();
+  await visible(page.getByText('CONSULTATION RESERVED', { exact: true }));
+  check(true, 'consultation reservation completes from saved brief');
+  await page.screenshot({ path: path.join(evidence, demo ? 'demo-mobile-receipt.png' : 'wordpress-mobile-receipt.png'), fullPage: true });
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download project brief ↓', exact: true }).click();
+  const download = await pending;
+  await download.saveAs(path.join(evidence, demo ? 'demo-brief.html' : 'wordpress-brief.html'));
+  check(true, 'downloadable project brief is generated');
+  return credential;
+}
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    for (const [width, height, label] of [[1440, 1000, 'desktop'], [390, 844, 'mobile'], [360, 800, 'small-mobile']]) {
+      await page.setViewportSize({ width, height });
+      await page.goto('http://127.0.0.1:8091/');
+      await page.locator('.nl-hero-image img').waitFor();
+      await page.evaluate(() => Promise.all([...document.images].map(image => image.complete ? Promise.resolve() : new Promise(resolve => { image.onload = resolve; image.onerror = resolve; }))));
+      check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), label + ' homepage has no horizontal overflow');
+      check(await page.evaluate(() => [...document.images].every(image => image.naturalWidth > 0)), label + ' homepage has no broken images');
+      await page.screenshot({ path: path.join(evidence, 'home-' + label + '.png'), fullPage: true });
+    }
+    await page.goto('http://127.0.0.1:8091/projects/');
+    check(await page.locator('.nl-project-card:visible').count() === 6, 'six case studies shown');
+    await page.getByRole('button', { name: 'Kitchens', exact: true }).click();
+    check(await page.locator('.nl-project-card:visible').count() === 2, 'gallery category filtering works');
+    await page.goto('http://127.0.0.1:8091/project/birch-house/');
+    const comparison = page.getByRole('slider');
+    await comparison.focus();
+    await comparison.press('ArrowRight');
+    check(await comparison.inputValue() === '51', 'before-after comparison supports keyboard control');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const demoCredential = await planner(page, 'http://127.0.0.1:8091', true);
+    await page.goto('http://127.0.0.1:8091/demo-desk/');
+    await page.getByRole('button', { name: 'NL-' + demoCredential.id.slice(0, 8).toUpperCase(), exact: true }).click();
+    await page.locator('#demo-notes').fill('Discuss a phased scope. Fixture data only.');
+    await page.getByRole('button', { name: 'Save notes', exact: true }).click();
+    check(await page.locator('#demo-notes').inputValue() === 'Discuss a phased scope. Fixture data only.', 'demo staff notes persist');
+    await page.getByRole('button', { name: 'Retry simulated email', exact: true }).click();
+    check((await page.locator('.nl-demo-desk').innerText()).includes('No actual email'), 'demo retry is explicitly not actual delivery');
+    check((await page.evaluate(() => JSON.parse(localStorage.getItem('northline-demo-enquiries-v1')))).length === 1, 'demo workflow does not duplicate enquiries');
+    if (process.env.NORTHLINE_WORDPRESS === '1') {
+      const wp = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+      const wpPage = await wp.newPage();
+      wpPage.on('pageerror', error => errors.push(error.message));
+      const credential = await planner(wpPage, 'http://127.0.0.1:8090', false);
+      await wpPage.setViewportSize({ width: 1440, height: 1000 });
+      await wpPage.goto('http://127.0.0.1:8090/wp-login.php');
+      await wpPage.locator('#user_login').fill('studio');
+      await wpPage.locator('#user_pass').fill('Northline-CI-Only-Password');
+      await wpPage.locator('#wp-submit').click();
+      await wpPage.goto('http://127.0.0.1:8090/wp-admin/admin.php?page=northline-enquiries');
+      await wpPage.getByRole('link', { name: 'NL-' + credential.id.slice(0, 8).toUpperCase(), exact: true }).click();
+      await visible(wpPage.getByRole('heading', { name: /Alex WordPress Test/ }));
+      check(true, 'authenticated WordPress staff can open the mobile-submitted enquiry');
+      await wpPage.locator('#nl-notes').fill('Verified mobile-to-staff handover. Fictional fixture.');
+      await wpPage.getByRole('button', { name: 'Save enquiry', exact: true }).click();
+      check(await wpPage.locator('#nl-notes').inputValue() === 'Verified mobile-to-staff handover. Fictional fixture.', 'real staff notes persist');
+      await wpPage.screenshot({ path: path.join(evidence, 'wordpress-staff-enquiry.png'), fullPage: true });
+      await wp.close();
+    }
+    check(errors.length === 0, 'no browser JavaScript exceptions: ' + errors.join('; '));
+    fs.writeFileSync(path.join(evidence, 'browser-results.json'), JSON.stringify({ assertions, errors, status: 'passed' }, null, 2));
+    console.log(assertions + ' browser assertions passed.');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });
