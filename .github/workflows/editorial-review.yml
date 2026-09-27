@@ -1,0 +1,22 @@
+name: Editorial photography review
+on:
+  push:
+    paths: ['.github/workflows/editorial-review.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Retrieve candidate editorial interiors for visual review
+        run: |
+          mkdir -p editorial-review
+          curl --fail --location --retry 2 'https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1800&q=88&fm=jpg' -o editorial-review/interior-one.jpg
+          curl --fail --location --retry 2 'https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=1800&q=88&fm=jpg' -o editorial-review/interior-two.jpg
+          printf '%s\n' 'Candidates only; not represented as NORTHLINE client work.' 'Source: Unsplash image CDN. License: https://unsplash.com/license' > editorial-review/PROVENANCE.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: northline-editorial-review
+          path: editorial-review/
+          retention-days: 7
