@@ -1,0 +1,75 @@
+name: WordPress quality and release packages
+on:
+  push:
+    paths-ignore: ['theme/northline/assets/images/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: northline-quality
+  cancel-in-progress: true
+jobs:
+  wordpress:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: northline-ci-only
+          MYSQL_DATABASE: northline
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pnorthline-ci-only"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, gd, fileinfo, exif
+          tools: wp-cli
+      - name: Syntax and domain rules
+        run: |
+          mkdir -p evidence
+          find plugins theme tests tools -name '*.php' -print0 | xargs -0 -n1 php -l
+          node --check plugins/northline-planner/assets/planner.js
+          node --check plugins/northline-planner/assets/demo.js
+          node --check plugins/northline-planner/assets/editor.js
+          php tests/domain.php | tee evidence/domain.txt
+      - name: Install and test isolated WordPress
+        env:
+          NORTHLINE_TESTING: '1'
+        run: |
+          mkdir -p /tmp/northline-wp
+          wp core download --path=/tmp/northline-wp --version=latest
+          wp config create --path=/tmp/northline-wp --dbname=northline --dbuser=root --dbpass=northline-ci-only --dbhost=127.0.0.1:3306 --skip-check
+          wp core install --path=/tmp/northline-wp --url=http://127.0.0.1:8090 --title=NORTHLINE --admin_user=studio --admin_password=Northline-CI-Only-Password --admin_email=studio@example.com --skip-email
+          cp -R theme/northline /tmp/northline-wp/wp-content/themes/
+          cp -R plugins/northline-planner /tmp/northline-wp/wp-content/plugins/
+          wp plugin activate northline-planner --path=/tmp/northline-wp
+          wp theme activate northline --path=/tmp/northline-wp
+          wp option update timezone_string America/Halifax --path=/tmp/northline-wp
+          wp rewrite structure '/%postname%/' --path=/tmp/northline-wp
+          wp northline seed --path=/tmp/northline-wp
+          wp eval-file "$PWD/tests/integration.php" --path=/tmp/northline-wp | tee evidence/wordpress-integration.txt
+          wp core version --path=/tmp/northline-wp > evidence/wordpress-version.txt
+      - name: Build preview and installable packages
+        run: |
+          php tools/build-preview.php
+          python tools/package.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: northline-verified-build
+          path: |
+            plugins/
+            theme/
+            tools/
+            tests/
+            docs/
+            preview/
+            dist/
+            evidence/
+            README.md
+          retention-days: 14
