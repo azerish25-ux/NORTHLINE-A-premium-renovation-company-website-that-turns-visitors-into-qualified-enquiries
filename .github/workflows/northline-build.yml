@@ -1,0 +1,141 @@
+name: NORTHLINE build and architectural studio
+on:
+  push:
+    paths: ['.build/source.json']
+  workflow_dispatch:
+    inputs:
+      render:
+        description: 'Render original architectural image pairs'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: northline-production
+  cancel-in-progress: false
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      render: ${{ steps.import.outputs.render }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - id: import
+        name: Materialize verified source snapshot
+        env:
+          MANUAL_RENDER: ${{ inputs.render }}
+        run: |
+          python - <<'PY'
+          import pathlib,json,gzip,base64,hashlib,os
+          packet=pathlib.Path('.build/source.json')
+          render=os.environ.get('MANUAL_RENDER')=='true'
+          if packet.exists():
+              data=json.loads(packet.read_text())
+              raw=gzip.decompress(base64.b64decode(data['data'],validate=True))
+              assert hashlib.sha256(raw).hexdigest()==data['sha256'], 'Source checksum mismatch'
+              files=json.loads(raw)
+              for name,content in files.items():
+                  p=pathlib.Path(name)
+                  assert not p.is_absolute() and '..' not in p.parts and '.git' not in p.parts
+                  assert isinstance(content,str)
+                  p.parent.mkdir(parents=True,exist_ok=True)
+                  p.write_text(content)
+                  print(name)
+              render=bool(data.get('render',False))
+              packet.unlink()
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('render='+str(render).lower()+'\n')
+          PY
+          git config user.name 'NORTHLINE build'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'build: materialize verified NORTHLINE source snapshot'
+            git push origin HEAD:main
+          fi
+  render:
+    if: needs.source.outputs.render == 'true'
+    needs: source
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [0, 1, 2, 3, 4, 5]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Install Blender studio renderer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender
+          blender --version
+      - name: Render matched camera pairs
+        run: blender -b -t 4 -P tools/render_architecture.py -- --project ${{ matrix.project }} --samples 96 --output rendered
+      - uses: actions/upload-artifact@v4
+        with:
+          name: architecture-${{ matrix.project }}
+          path: rendered/
+          retention-days: 7
+  images:
+    if: ${{ always() && needs.render.result == 'success' }}
+    needs: render
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: architecture-*
+          path: theme/northline/assets/images
+          merge-multiple: true
+      - name: Commit generated architectural image pairs
+        run: |
+          git config user.name 'NORTHLINE studio'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add theme/northline/assets/images
+          if ! git diff --cached --quiet; then
+            git commit -m 'art: publish six original matched architectural visualisation pairs'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: northline-original-architecture
+          path: theme/northline/assets/images
+          retention-days: 14
+  verify:
+    if: ${{ always() && needs.source.result == 'success' && (needs.images.result == 'success' || needs.images.result == 'skipped') }}
+    needs: [source, images]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Verify and package available source
+        run: |
+          find theme plugins -name '*.php' -print0 2>/dev/null | xargs -0 -r -n1 php -l
+          if [ -f tests/domain.php ]; then php tests/domain.php; fi
+          if [ -f tools/build-preview.php ]; then php tools/build-preview.php; fi
+          if [ -f tools/package.py ]; then python tools/package.py; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: northline-source-and-packages
+          path: |
+            theme/
+            plugins/
+            preview/
+            dist/
+            docs/
+            tests/
+            tools/
+          retention-days: 14
