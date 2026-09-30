@@ -6,11 +6,10 @@ use Northline\Api;
 use Northline\Mail;
 use Northline\Content;
 if (getenv('NORTHLINE_TESTING') !== '1') throw new RuntimeException('This test requires an isolated test installation.');
-$count = 0;
+$GLOBALS['northline_integration_assertions'] = 0;
 function nl_check(bool $condition, string $message): void {
-    global $count;
     if (!$condition) throw new RuntimeException($message);
-    $count++;
+    $GLOBALS['northline_integration_assertions']++;
     echo "PASS {$message}\n";
 }
 $brief = Brief::validate(['type' => 'kitchen', 'propertySize' => 1800, 'area' => 200, 'finish' => 'considered', 'timeline' => '6-12', 'budget' => '100-200', 'name' => 'Alex Integration', 'town' => 'Demo Town', 'priorities' => 'Improve daylight and create useful storage for everyday family life.', 'email' => 'integration@example.com', 'phone' => '', 'consent' => true]);
@@ -79,4 +78,4 @@ nl_check(Database::byId($id) === null, 'erasure removes brief');
 foreach (['uploads', 'outbox', 'bookings'] as $table) nl_check((int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . Database::table($table) . ' WHERE enquiry_id=%d', $id)) === 0, 'erasure removes related ' . $table);
 Database::delete((int) $second['id']);
 Database::delete((int) $third['id']);
-echo "{$count} WordPress integration assertions passed. No real email was sent.\n";
+echo $GLOBALS['northline_integration_assertions'] . " WordPress integration assertions passed. No real email was sent.\n";
