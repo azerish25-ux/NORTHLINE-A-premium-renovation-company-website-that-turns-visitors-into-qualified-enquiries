@@ -1,0 +1,29 @@
+{
+  "revision": 2,
+  "detail": "limestone",
+  "blender": "4.2.15 LTS",
+  "camera": {
+    "location": [
+      1.8,
+      -1.6,
+      1.65
+    ],
+    "target": [
+      0.65,
+      0.35,
+      0.98
+    ],
+    "lens_mm": 55,
+    "sensor_mm": 36.0
+  },
+  "samples": 96,
+  "resolution": [
+    1600,
+    1067
+  ],
+  "render": {
+    "file": "material-limestone.jpg",
+    "bytes": 176819,
+    "sha256": "24578b5d46940e22913adf333900eba6b221819fc4b3a9a2173635717ef99889"
+  }
+}

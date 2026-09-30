@@ -1,33 +1,61 @@
 {
+  "revision": 2,
   "project": "courtyard-house",
   "type": "Original fictional architectural visualisation",
   "renderer": "Blender Cycles",
+  "blender": "4.2.15 LTS",
+  "unit": "metres",
+  "seed": 421,
+  "samples": 96,
+  "resolution": [
+    1920,
+    1280
+  ],
   "states": {
     "after": {
       "location": [
-        8.8,
-        -12.6,
-        3.4
+        8.3,
+        -12.8,
+        3.15
       ],
       "target": [
         0,
-        -0.1,
-        1.5
+        -0.15,
+        1.55
       ],
-      "lens_mm": 36
+      "lens_mm": 35,
+      "sensor_mm": 36.0
     },
     "before": {
       "location": [
-        8.8,
-        -12.6,
-        3.4
+        8.3,
+        -12.8,
+        3.15
       ],
       "target": [
         0,
-        -0.1,
-        1.5
+        -0.15,
+        1.55
       ],
-      "lens_mm": 36
+      "lens_mm": 35,
+      "sensor_mm": 36.0
     }
+  },
+  "renders": [
+    {
+      "file": "courtyard-house-after.jpg",
+      "bytes": 467044,
+      "sha256": "809239236b6f4c4ca62a176652aabf98cc5fd36b0b3137cd48d5209afd324bdb"
+    },
+    {
+      "file": "courtyard-house-before.jpg",
+      "bytes": 466367,
+      "sha256": "77e6fbaacc651eaf0d65c438c6573f08a55fde2ae0a4c1f8d9fc8928500058b0"
+    }
+  ],
+  "scene": {
+    "objects": 11635,
+    "mesh_objects": 10092,
+    "materials": 19
   }
 }

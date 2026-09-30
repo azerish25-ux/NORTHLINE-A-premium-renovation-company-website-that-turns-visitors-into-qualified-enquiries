@@ -1,0 +1,29 @@
+{
+  "revision": 2,
+  "detail": "limewash",
+  "blender": "4.2.15 LTS",
+  "camera": {
+    "location": [
+      -0.75,
+      -0.4,
+      1.83
+    ],
+    "target": [
+      -0.5,
+      3.2,
+      1.65
+    ],
+    "lens_mm": 48,
+    "sensor_mm": 36.0
+  },
+  "samples": 96,
+  "resolution": [
+    1600,
+    1067
+  ],
+  "render": {
+    "file": "material-limewash.jpg",
+    "bytes": 179633,
+    "sha256": "6d2ddb118d63d6de888435709f948685eddd2bc94ac2b4ce4d93cf394392ee99"
+  }
+}

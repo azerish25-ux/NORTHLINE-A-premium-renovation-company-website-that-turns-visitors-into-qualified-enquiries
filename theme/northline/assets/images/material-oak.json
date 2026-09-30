@@ -1,0 +1,29 @@
+{
+  "revision": 2,
+  "detail": "oak",
+  "blender": "4.2.15 LTS",
+  "camera": {
+    "location": [
+      -0.85,
+      -2.5,
+      1.3
+    ],
+    "target": [
+      0.2,
+      0.2,
+      0.62
+    ],
+    "lens_mm": 50,
+    "sensor_mm": 36.0
+  },
+  "samples": 96,
+  "resolution": [
+    1600,
+    1067
+  ],
+  "render": {
+    "file": "material-oak.jpg",
+    "bytes": 302124,
+    "sha256": "ab28fe569edddb3e511dccecfd0266abf9e42434c84af5a5b73b89bce06fc6fb"
+  }
+}

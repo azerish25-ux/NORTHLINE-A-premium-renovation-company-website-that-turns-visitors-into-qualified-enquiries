@@ -1,33 +1,61 @@
 {
+  "revision": 2,
   "project": "alder-house",
   "type": "Original fictional architectural visualisation",
   "renderer": "Blender Cycles",
+  "blender": "4.2.15 LTS",
+  "unit": "metres",
+  "seed": 419,
+  "samples": 96,
+  "resolution": [
+    1920,
+    1280
+  ],
   "states": {
     "after": {
       "location": [
-        -1.2,
-        -7,
-        2.18
+        -0.3,
+        -6.72,
+        1.97
       ],
       "target": [
         0,
-        0.65,
-        1.25
+        0.58,
+        1.43
       ],
-      "lens_mm": 31
+      "lens_mm": 30,
+      "sensor_mm": 36.0
     },
     "before": {
       "location": [
-        -1.2,
-        -7,
-        2.18
+        -0.3,
+        -6.72,
+        1.97
       ],
       "target": [
         0,
-        0.65,
-        1.25
+        0.58,
+        1.43
       ],
-      "lens_mm": 31
+      "lens_mm": 30,
+      "sensor_mm": 36.0
     }
+  },
+  "renders": [
+    {
+      "file": "alder-house-after.jpg",
+      "bytes": 345473,
+      "sha256": "a6112eb3b4a88ab4d358f6d2fc6fb2a18bce420b299c3f594fd330f277bc705e"
+    },
+    {
+      "file": "alder-house-before.jpg",
+      "bytes": 310923,
+      "sha256": "f71347fc29799e8571a67cda4661b6b3f9fba96d6d188f7fc61324eb5fb54908"
+    }
+  ],
+  "scene": {
+    "objects": 8997,
+    "mesh_objects": 8833,
+    "materials": 19
   }
 }

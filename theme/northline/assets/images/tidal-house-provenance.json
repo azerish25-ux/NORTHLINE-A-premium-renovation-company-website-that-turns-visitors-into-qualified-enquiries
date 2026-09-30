@@ -1,33 +1,61 @@
 {
+  "revision": 2,
   "project": "tidal-house",
   "type": "Original fictional architectural visualisation",
   "renderer": "Blender Cycles",
+  "blender": "4.2.15 LTS",
+  "unit": "metres",
+  "seed": 418,
+  "samples": 96,
+  "resolution": [
+    1920,
+    1280
+  ],
   "states": {
     "after": {
       "location": [
         10.1,
-        -12.6,
-        4.2
+        -12.8,
+        3.15
       ],
       "target": [
         0,
-        -0.1,
-        1.5
+        -0.15,
+        1.55
       ],
-      "lens_mm": 36
+      "lens_mm": 35,
+      "sensor_mm": 36.0
     },
     "before": {
       "location": [
         10.1,
-        -12.6,
-        4.2
+        -12.8,
+        3.15
       ],
       "target": [
         0,
-        -0.1,
-        1.5
+        -0.15,
+        1.55
       ],
-      "lens_mm": 36
+      "lens_mm": 35,
+      "sensor_mm": 36.0
     }
+  },
+  "renders": [
+    {
+      "file": "tidal-house-after.jpg",
+      "bytes": 422653,
+      "sha256": "8a998e7577c2f8b8c6a094def813ae994a8c1dcc1f1910449c4762213b3e42c3"
+    },
+    {
+      "file": "tidal-house-before.jpg",
+      "bytes": 424838,
+      "sha256": "405de5aa5371d0a22194b8b28fbc0345bd396bf4c948b05feedc26074cb8bb12"
+    }
+  ],
+  "scene": {
+    "objects": 11635,
+    "mesh_objects": 10092,
+    "materials": 19
   }
 }
