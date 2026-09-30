@@ -319,3 +319,15 @@ h1 em, h2 em { color: var(--nl-clay); }
   .nl-material-panel { break-inside: avoid; border: 1px solid #aaa; }
   .nl-material-atelier { background: transparent; }
 }
+
+/* Existing edited pages are not silently replaced by a theme update. */
+.nl-hero-heading:has(> h1) { display: flex; flex-direction: column; align-items: flex-start; gap: 24px; }
+.nl-hero-heading:has(> h1) > .nl-kicker { margin: 0 !important; }
+.nl-hero-heading:has(> h1) > .nl-hero-bottom { flex-direction: row; align-items: center; }
+.nl-material-panel[hidden], .nl-material-controls[hidden] { display: none; }
+@media print { .nl-material-panel[hidden] { display: grid !important; } }
+@media (max-width: 800px) {
+  html:not(.nl-js) .nl-static-nav { display: flex; flex-wrap: wrap; width: 100%; gap: 8px 20px; }
+  html:not(.nl-js) .nl-header { flex-wrap: wrap; gap: 18px; }
+  html:not(.nl-js) .nl-menu-toggle { display: none; }
+}

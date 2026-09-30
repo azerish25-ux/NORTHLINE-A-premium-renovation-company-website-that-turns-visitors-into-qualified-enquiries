@@ -4,14 +4,17 @@
   "settings": {
     "appearanceTools": true,
     "layout": { "contentSize": "760px", "wideSize": "1480px" },
-    "color": { "defaultPalette": false, "palette": [
-      { "slug": "limestone", "name": "Limestone", "color": "#f3f0e9" },
-      { "slug": "forest", "name": "Deep olive", "color": "#283229" },
-      { "slug": "clay", "name": "Burnt clay", "color": "#af543c" },
-      { "slug": "sage", "name": "Muted sage", "color": "#646c60" },
-      { "slug": "line", "name": "Drawing line", "color": "#cbc7bd" },
-      { "slug": "paper", "name": "Warm paper", "color": "#fcfaf5" }
-    ] },
+    "color": {
+      "defaultPalette": false,
+      "palette": [
+        { "slug": "limestone", "name": "Limestone", "color": "#f6f3ec" },
+        { "slug": "forest", "name": "Deep olive", "color": "#24332b" },
+        { "slug": "clay", "name": "Burnt clay", "color": "#81513c" },
+        { "slug": "sage", "name": "Muted sage", "color": "#596158" },
+        { "slug": "line", "name": "Drawing line", "color": "#d0d2c4" },
+        { "slug": "paper", "name": "Warm paper", "color": "#fdfbf6" }
+      ]
+    },
     "typography": {
       "fluid": true,
       "fontFamilies": [
@@ -27,12 +30,15 @@
         { "slug": "xx-large", "name": "Display", "size": "7rem", "fluid": { "min": "3.25rem", "max": "7rem" } }
       ]
     },
-    "spacing": { "units": ["px", "rem", "vw", "%"], "spacingSizes": [
-      { "slug": "20", "name": "Tight", "size": "0.75rem" },
-      { "slug": "40", "name": "Standard", "size": "1.5rem" },
-      { "slug": "60", "name": "Room", "size": "3rem" },
-      { "slug": "80", "name": "Section", "size": "7rem" }
-    ] }
+    "spacing": {
+      "units": ["px", "rem", "vw", "%"],
+      "spacingSizes": [
+        { "slug": "20", "name": "Tight", "size": "0.75rem" },
+        { "slug": "40", "name": "Standard", "size": "1.5rem" },
+        { "slug": "60", "name": "Room", "size": "3rem" },
+        { "slug": "80", "name": "Section", "size": "7rem" }
+      ]
+    }
   },
   "styles": {
     "color": { "background": "var:preset|color|limestone", "text": "var:preset|color|forest" },
@@ -41,7 +47,12 @@
     "elements": {
       "heading": { "typography": { "fontFamily": "var:preset|font-family|serif", "fontWeight": "400", "lineHeight": "1.08", "letterSpacing": "-0.045em" } },
       "link": { "color": { "text": "var:preset|color|forest" } },
-      "button": { "color": { "background": "var:preset|color|forest", "text": "var:preset|color|limestone" }, "border": { "radius": "0" }, "typography": { "fontSize": "0.9375rem", "fontWeight": "400" }, "spacing": { "padding": { "top": "1rem", "bottom": "1rem", "left": "1.5rem", "right": "1.5rem" } } }
+      "button": {
+        "color": { "background": "var:preset|color|forest", "text": "var:preset|color|limestone" },
+        "border": { "radius": "999px" },
+        "typography": { "fontSize": "0.9375rem", "fontWeight": "400" },
+        "spacing": { "padding": { "top": "1rem", "bottom": "1rem", "left": "1.5rem", "right": "1.5rem" } }
+      }
     }
   },
   "templateParts": [

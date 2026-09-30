@@ -3,6 +3,8 @@
 declare(strict_types=1);
 namespace Northline;
 
+require_once __DIR__ . "/Studio.php";
+
 final class Content
 {
     public static function e(string $value): string { return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
@@ -27,13 +29,15 @@ final class Content
     }
     public static function image(string $file, string $alt, string $class = ''): string
     {
-        return '<!-- wp:image ' . json_encode(['sizeSlug' => 'full', 'linkDestination' => 'none', 'className' => $class]) . ' --><figure class="wp-block-image size-full ' . self::e($class) . '"><img src="' . self::e(self::asset($file)) . '" alt="' . self::e($alt) . '"/></figure><!-- /wp:image -->';
+        $hero = str_contains($class, 'nl-hero-image');
+        $loading = $hero ? ' fetchpriority="high" loading="eager"' : ' loading="lazy"';
+        return '<!-- wp:image ' . json_encode(['sizeSlug' => 'full', 'linkDestination' => 'none', 'className' => $class]) . ' --><figure class="wp-block-image size-full ' . self::e($class) . '"><img src="' . self::e(self::asset($file)) . '" alt="' . self::e($alt) . '" width="1920" height="1280" decoding="async"' . $loading . '/></figure><!-- /wp:image -->';
     }
     public static function button(string $label, string $path, string $class = ''): string
     {
         return '<!-- wp:buttons --><div class="wp-block-buttons"><!-- wp:button ' . json_encode(['className' => $class]) . ' --><div class="wp-block-button ' . self::e($class) . '"><a class="wp-block-button__link wp-element-button" href="' . self::e(self::url($path)) . '">' . $label . '</a></div><!-- /wp:button --></div><!-- /wp:buttons -->';
     }
-    public static function dynamic(string $name, array $attrs = []): string { return '<!-- wp:northline/' . $name . ' ' . json_encode($attrs, JSON_UNESCAPED_SLASHES) . ' /-->'; }
+    public static function dynamic(string $name, array $attrs = []): string { return '<!-- wp:northline/' . $name . ' ' . json_encode((object) $attrs, JSON_UNESCAPED_SLASHES) . ' /-->'; }
     public static function details(string $question, string $answer): string { return '<!-- wp:details --><details class="wp-block-details"><summary>' . self::e($question) . '</summary>' . self::p(self::e($answer)) . '</details><!-- /wp:details -->'; }
     private static function intro(string $kicker, string $title, string $description): string { return self::group('nl-page-intro nl-shell', self::p($kicker, 'nl-kicker') . self::h($title, 1) . self::p($description, 'nl-lead')); }
     public static function projects(): array
@@ -68,13 +72,7 @@ final class Content
     }
     public static function pages(): array
     {
-        $home = self::group('nl-hero nl-shell', self::group('nl-hero-heading', self::p('DESIGN & BUILD / PRINCE EDWARD ISLAND', 'nl-kicker') . self::h('A better way<br>to <em>come home.</em>', 1) . self::group('nl-hero-bottom', self::p('Thoughtful renovations.<br>One considered process.<br>A home that feels like you.') . self::button('Explore our work <span aria-hidden="true">↘</span>', 'projects/', 'is-style-outline'))) . self::group('nl-hero-media', self::image('birch-house-after.jpg', 'Original architectural visualisation of an oak and limestone kitchen opening towards a garden', 'nl-hero-image') . self::group('nl-hero-caption', self::p('01 / BIRCH HOUSE', 'nl-kicker') . self::p('Oak. Limestone. Room to breathe.') . self::p('Fictional design study / Original visualisation', 'nl-small'))));
-        $home .= self::group('nl-introduction nl-shell', self::p('BUILT AROUND YOU', 'nl-kicker') . self::h('Not just a different house.<br><em>A different feeling.</em>') . self::p('The morning light at the kitchen counter. A room that finally works for everyone. The quiet satisfaction of a detail done properly. We bring design and construction together to make those everyday moments better.', 'nl-lead'));
-        $home .= self::group('nl-services-band', self::group('nl-shell', self::group('nl-section-heading', self::p('01 / WHAT WE DO', 'nl-kicker') . self::h('Make more of<br>the home <em>you have.</em>')) . self::serviceRows()));
-        $home .= self::group('nl-selected nl-shell', self::group('nl-section-heading', self::group('', self::p('02 / SELECTED DESIGN STUDIES', 'nl-kicker') . self::h('Spaces with<br><em>a point of view.</em>')) . self::button('All six projects ↗', 'projects/', 'is-style-outline')) . self::dynamic('projects', ['limit' => 2, 'filters' => false]) . self::p('Every project shown is a fictional design study, with original matched architectural visualisations.', 'nl-small'));
-        $home .= self::group('nl-planning-feature nl-shell', self::dynamic('plan') . self::group('nl-planning-copy', self::p('03 / BEFORE WE PICK UP A PENCIL', 'nl-kicker') . self::h('Your ideas.<br><em>A clearer plan.</em>') . self::p('A renovation begins with questions. Our project planner turns them into a useful brief: your priorities, your timescale and an honest conversation about budget.', 'nl-lead') . self::p('Receive an illustrative range with the assumptions visible. Save your brief. Then choose a time to talk. No invented instant quote. No pressure to have every answer.') . self::button('Plan your renovation ↗', 'plan-your-renovation/') . self::p('Around 5 minutes · No obligation · Your brief stays yours', 'nl-small')));
-        $home .= self::group('nl-material-section nl-shell', self::group('nl-material-copy', self::p('A SMALLER PALETTE. A RICHER EXPERIENCE.', 'nl-kicker') . self::h('Materials that<br><em>belong together.</em>') . self::p('Natural grain, a softened edge, the way a surface holds the light. We favour a few well-chosen materials over a room full of competing statements.')) . self::group('nl-material-swatches', self::group('nl-swatch nl-oak', self::p('01 / OAK')) . self::group('nl-swatch nl-stone', self::p('02 / LIMESTONE')) . self::group('nl-swatch nl-lime', self::p('03 / LIMEWASH'))));
-        $home .= self::cta();
+        $home = Studio::home();
         $studio = self::intro('THE STUDIO / OUR POINT OF VIEW', 'Thoughtful by design.<br><em>Accountable by nature.</em>', 'NORTHLINE imagines a simpler relationship between the people who design a home and the people who build it. One conversation, carried carefully from first sketch to final detail.');
         $studio .= self::image('alder-house-after.jpg', 'Living-room design study with linen seating, oak flooring and a stone hearth', 'nl-wide-image');
         $studio .= self::group('nl-editorial nl-shell', self::p('A FICTIONAL PRACTICE WITH A REAL STANDARD', 'nl-kicker') . self::group('nl-prose', self::h('Good design is not<br><em>an extra layer.</em>') . self::p('It is the arrangement of things that make a home easier to live in: where daylight falls, how rooms connect, where belongings go and how materials meet. The most important decisions are often the least visible in a photograph.') . self::p('Our design-and-build model is built around continuity. The brief should survive the move from concept to technical detail. Materials should be chosen with their installation in mind. The programme should acknowledge the realities of working in an existing house.') . self::h('Clarity is part of the craft.', 3) . self::p('A beautiful proposal is not enough when the scope is unclear. We make assumptions explicit, record decisions and explain what needs further investigation. A provisional allowance is labelled as one. A change in scope is discussed before it becomes a surprise.') . self::p('NORTHLINE is a fictional portfolio practice. There are no invented awards, client reviews or completed-project claims here. The work demonstrates an editable website and a considered enquiry process.')));

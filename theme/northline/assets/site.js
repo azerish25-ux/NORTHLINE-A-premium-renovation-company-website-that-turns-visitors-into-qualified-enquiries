@@ -1,6 +1,7 @@
 /* Progressive enhancements. Reading content never depends on this script. */
 (function () {
   'use strict';
+  document.documentElement.classList.add('nl-js');
   document.querySelectorAll('[data-project-gallery]').forEach(gallery => {
     const cards = [...gallery.querySelectorAll('[data-category]')];
     const count = gallery.querySelector('.nl-gallery-count');

@@ -11,11 +11,12 @@ final class Blocks
         foreach (['nl_image', 'nl_type', 'nl_area', 'nl_location'] as $key) {
             register_post_meta('nl_project', $key, ['type' => 'string', 'single' => true, 'show_in_rest' => true, 'sanitize_callback' => 'sanitize_text_field', 'auth_callback' => static fn (): bool => current_user_can('edit_posts')]);
         }
-        wp_register_script('northline-block-editor', plugins_url('assets/editor.js', NORTHLINE_PLANNER_FILE), ['wp-blocks', 'wp-element', 'wp-components', 'wp-block-editor', 'wp-server-side-render'], '1.0.0', true);
+        wp_register_script('northline-block-editor', plugins_url('assets/editor.js', NORTHLINE_PLANNER_FILE), ['wp-blocks', 'wp-element', 'wp-components', 'wp-block-editor', 'wp-server-side-render'], '2.0.0', true);
         foreach ([
             'planner' => ['mode' => ['type' => 'string', 'default' => 'planner']],
             'projects' => ['limit' => ['type' => 'number', 'default' => 6], 'filters' => ['type' => 'boolean', 'default' => true]],
             'comparison' => ['before' => ['type' => 'string', 'default' => ''], 'after' => ['type' => 'string', 'default' => ''], 'label' => ['type' => 'string', 'default' => 'Matched architectural view']],
+            'materials' => ['heading' => ['type' => 'string', 'default' => 'A few things, chosen well.']],
             'plan' => ['label' => ['type' => 'string', 'default' => 'Birch House / Ground floor']],
         ] as $name => $attributes) {
             register_block_type('northline/' . $name, ['api_version' => 3, 'attributes' => $attributes, 'editor_script' => 'northline-block-editor', 'render_callback' => static fn (array $attrs): string => self::render($name, $attrs)]);
@@ -29,7 +30,7 @@ final class Blocks
         if (!$post || !has_block('northline/planner', $post)) {
             return;
         }
-        wp_enqueue_script('northline-planner', plugins_url('assets/planner.js', NORTHLINE_PLANNER_FILE), [], '1.0.0', true);
+        wp_enqueue_script('northline-planner', plugins_url('assets/planner.js', NORTHLINE_PLANNER_FILE), [], '2.0.0', true);
         wp_localize_script('northline-planner', 'NORTHLINE', ['api' => esc_url_raw(rest_url('northline/v1/')), 'home' => home_url('/'), 'demo' => false, 'rateCard' => Estimate::RATE_CARD, 'timezone' => wp_timezone_string(), 'captchaSiteKey' => defined('NORTHLINE_TURNSTILE_SITE_KEY') ? NORTHLINE_TURNSTILE_SITE_KEY : '']);
         if (defined('NORTHLINE_TURNSTILE_SITE_KEY') && NORTHLINE_TURNSTILE_SITE_KEY !== '') {
             wp_enqueue_script('northline-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', [], null, ['strategy' => 'defer', 'in_footer' => true]);
@@ -42,6 +43,7 @@ final class Blocks
             'planner' => self::planner($attrs['mode'] ?? 'planner'),
             'projects' => self::projects($attrs),
             'comparison' => self::comparison($attrs),
+            'materials' => Studio::materials($attrs),
             'plan' => self::plan($attrs['label'] ?? 'Birch House / Ground floor'),
             default => '',
         };

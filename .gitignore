@@ -1,0 +1,7 @@
+preview/
+dist/
+evidence/
+node_modules/
+__pycache__/
+*.pyc
+*.blend1

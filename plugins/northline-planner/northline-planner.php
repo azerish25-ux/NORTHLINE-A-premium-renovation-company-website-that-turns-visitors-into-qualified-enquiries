@@ -2,7 +2,7 @@
 /**
  * Plugin Name: NORTHLINE Project Planner
  * Description: Accessible project planning, durable enquiries, private references and consultation booking.
- * Version: 1.0.0
+ * Version: 2.0.0
  * Requires at least: 6.8
  * Requires PHP: 8.2
  * Author: NORTHLINE Studio
@@ -61,6 +61,12 @@ if (defined('WP_CLI') && WP_CLI) {
     \WP_CLI::add_command('northline seed', static function (): void {
         $result = Content::seed();
         \WP_CLI::success('Demo content installed without overwriting existing content: ' . wp_json_encode($result));
+    });
+    // A new draft, never an automatic replacement of an edited production homepage.
+    \WP_CLI::add_command('northline design-draft', static function (): void {
+        $id = wp_insert_post(['post_type' => 'page', 'post_status' => 'draft', 'post_title' => 'Material & Space / homepage draft', 'post_content' => wp_slash(Studio::home())], true);
+        if (is_wp_error($id)) \WP_CLI::error($id->get_error_message());
+        \WP_CLI::success('Editable homepage draft created: ' . $id . '. Review before publishing; the current homepage is unchanged.');
     });
     \WP_CLI::add_command('northline outbox', static function (): void {
         Mail::process();

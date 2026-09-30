@@ -72,7 +72,7 @@ async function planner(page, base, demo) {
   return credential;
 }
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined });
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
     const page = await context.newPage();
@@ -82,6 +82,7 @@ async function planner(page, base, demo) {
       await page.setViewportSize({ width, height });
       await page.goto('http://127.0.0.1:8091/');
       await page.locator('.nl-hero-image img').waitFor();
+      await page.evaluate(() => { document.querySelectorAll('img').forEach(image => image.loading = 'eager'); });
       await page.evaluate(() => Promise.all([...document.images].map(image => image.complete ? Promise.resolve() : new Promise(resolve => { image.onload = resolve; image.onerror = resolve; }))));
       check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), label + ' homepage has no horizontal overflow');
       check(await page.evaluate(() => [...document.images].every(image => image.naturalWidth > 0)), label + ' homepage has no broken images');

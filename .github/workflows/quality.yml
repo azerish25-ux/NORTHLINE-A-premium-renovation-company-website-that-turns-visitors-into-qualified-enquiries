@@ -1,7 +1,7 @@
 name: WordPress quality and release packages
 on:
   push:
-    paths-ignore: ['theme/northline/assets/images/**']
+    paths-ignore: ['theme/northline/assets/images/**', 'creative/models/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ concurrency:
 jobs:
   wordpress:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     services:
       mysql:
         image: mysql:8.0
@@ -29,14 +29,18 @@ jobs:
           php-version: '8.3'
           extensions: mysqli, gd, fileinfo, exif
           tools: wp-cli
-      - name: Syntax and domain rules
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax, tokens and domain contracts
         run: |
           mkdir -p evidence
           find plugins theme tests tools -name '*.php' -print0 | xargs -0 -n1 php -l
-          node --check plugins/northline-planner/assets/planner.js
-          node --check plugins/northline-planner/assets/demo.js
-          node --check plugins/northline-planner/assets/editor.js
+          find plugins theme -name '*.js' -print0 | xargs -0 -n1 node --check
+          python tools/build-design.py
+          git diff --exit-code -- theme/northline/assets/tokens.css
           php tests/domain.php | tee evidence/domain.txt
+          php tests/design.php | tee evidence/design-markup.txt
       - name: Install and test isolated WordPress
         env:
           NORTHLINE_TESTING: '1'
@@ -53,11 +57,29 @@ jobs:
           wp rewrite structure '/%postname%/' --path=/tmp/northline-wp
           wp northline seed --path=/tmp/northline-wp
           wp eval-file "$PWD/tests/integration.php" --path=/tmp/northline-wp | tee evidence/wordpress-integration.txt
+          wp northline design-draft --path=/tmp/northline-wp
           wp core version --path=/tmp/northline-wp > evidence/wordpress-version.txt
       - name: Build preview and installable packages
         run: |
           php tools/build-preview.php
           python tools/package.py
+      - name: Install pinned browser test runner
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Verify design and complete mobile-to-staff workflows
+        env:
+          NORTHLINE_TESTING: '1'
+          NORTHLINE_WORDPRESS: '1'
+        run: |
+          # No external mail transport is exercised by browser fixtures.
+          mkdir -p /tmp/northline-wp/wp-content/mu-plugins
+          printf '%s\n' '<?php add_filter("pre_wp_mail", "__return_false");' > /tmp/northline-wp/wp-content/mu-plugins/disable-test-mail.php
+          php -S 127.0.0.1:8090 -t /tmp/northline-wp tools/test-router.php > evidence/wordpress-server.log 2>&1 &
+          python -m http.server 8091 --bind 127.0.0.1 --directory preview > evidence/preview-server.log 2>&1 &
+          for i in $(seq 1 30); do curl --fail --silent http://127.0.0.1:8090/ > /dev/null && curl --fail --silent http://127.0.0.1:8091/ > /dev/null && break; sleep 1; done
+          node tests/design.cjs | tee evidence/design-browser.txt
+          node tests/browser.cjs | tee evidence/browser.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -68,6 +90,7 @@ jobs:
             tools/
             tests/
             docs/
+            creative/
             preview/
             dist/
             evidence/
