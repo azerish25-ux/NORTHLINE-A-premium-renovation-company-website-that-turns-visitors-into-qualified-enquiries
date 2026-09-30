@@ -1,0 +1,18 @@
+{
+  "name": "NORTHLINE / Material & Space",
+  "version": "2.0.0",
+  "foundation": "Material Design 3, brand-adapted semantic roles",
+  "color": {
+    "primary": "#304438", "on-primary": "#fffdf7", "primary-container": "#dfe7d9", "on-primary-container": "#192e21",
+    "secondary": "#81513c", "on-secondary": "#fffaf5", "secondary-container": "#f0dfd0", "on-secondary-container": "#482615",
+    "surface": "#f6f3ec", "on-surface": "#24332b", "surface-container-low": "#fdfbf6", "surface-container": "#eeeae1",
+    "surface-container-high": "#e5e4d8", "on-surface-variant": "#596158", "outline": "#777d70", "outline-variant": "#d0d2c4",
+    "error": "#9c3028", "on-error": "#ffffff", "error-container": "#f9ded7", "on-error-container": "#501c15",
+    "inverse-surface": "#24332b", "inverse-on-surface": "#f4f1e7", "focus": "#935035"
+  },
+  "shape": {"small": 8, "medium": 16, "large": 28, "full": 999},
+  "space": {"1": 4, "2": 8, "3": 12, "4": 16, "6": 24, "8": 32, "12": 48, "16": 64, "24": 96},
+  "type": {"brand": "Georgia, 'Times New Roman', serif", "plain": "Arial, Helvetica, sans-serif", "annotation": "'Courier New', ui-monospace, monospace"},
+  "motion": {"fast": 140, "standard": 240, "slow": 420, "easing": "cubic-bezier(.2, 0, 0, 1)"},
+  "references": ["https://m3.material.io/foundations/", "https://material-web.dev/theming/material-theming/"]
+}

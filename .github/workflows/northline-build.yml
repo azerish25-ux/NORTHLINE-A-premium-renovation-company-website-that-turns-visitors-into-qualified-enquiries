@@ -1,10 +1,11 @@
 name: Architectural image studio
 on:
   push:
-    paths: ['tools/render_architecture.py', '.github/workflows/northline-build.yml']
+    paths: ['tools/render_architecture.py', 'tools/render_detail.py', '.github/workflows/northline-build.yml']
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: northline-architecture
   cancel-in-progress: false
@@ -13,12 +14,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [0, 1, 2, 3, 4, 5]
+        include:
+          - {name: house-0, project: 0, detail: ''}
+          - {name: house-1, project: 1, detail: ''}
+          - {name: house-2, project: 2, detail: ''}
+          - {name: house-3, project: 3, detail: ''}
+          - {name: house-4, project: 4, detail: ''}
+          - {name: house-5, project: 5, detail: ''}
+          - {name: detail-oak, project: 0, detail: oak}
+          - {name: detail-limestone, project: 0, detail: limestone}
+          - {name: detail-limewash, project: 0, detail: limewash}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
+      - name: Recover verified revision-2 house renders when source is identical
+        id: recover
+        if: matrix.detail == '' && matrix.project != 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Recovery is optional; expired artifacts or a changed renderer fall back to a fresh render.
+          if gh run download 36667022751 --name architecture-${{ matrix.project }} --dir recovered; then
+            if cmp -s tools/render_architecture.py recovered/source-renderer.py; then
+              mkdir -p rendered
+              cp -R recovered/images recovered/models rendered/
+              cp recovered/source-renderer.py rendered/
+              echo 'hit=true' >> "$GITHUB_OUTPUT"
+            fi
+          fi
       - name: Install pinned Blender renderer
+        if: steps.recover.outputs.hit != 'true'
         run: |
           curl --fail --location --retry 3 -o blender.tar.xz https://download.blender.org/release/Blender4.2/blender-4.2.15-linux-x64.tar.xz
           curl --fail --location --retry 3 -o blender.sha256 https://download.blender.org/release/Blender4.2/blender-4.2.15.sha256
@@ -27,13 +53,17 @@ jobs:
           echo "$expected  blender.tar.xz" | sha256sum --check
           tar -xf blender.tar.xz
           echo "$PWD/blender-4.2.15-linux-x64" >> "$GITHUB_PATH"
-      - name: Render matched camera pairs and editable source scenes
+      - name: Render matched camera pair and editable source
+        if: matrix.detail == '' && steps.recover.outputs.hit != 'true'
         run: |
-          blender -b -t 4 --python-exit-code 1 -P tools/render_architecture.py -- --project ${{ matrix.project }} --samples 96 --width 1920 --output rendered/images --blend-dir rendered/models --details
+          blender -b -t 4 --python-exit-code 1 -P tools/render_architecture.py -- --project ${{ matrix.project }} --samples 96 --width 1920 --output rendered/images --blend-dir rendered/models
           cp tools/render_architecture.py rendered/source-renderer.py
+      - name: Render one independent material study
+        if: matrix.detail != ''
+        run: blender -b -t 4 --python-exit-code 1 -P tools/render_detail.py -- --detail ${{ matrix.detail }} --samples 96 --width 1600 --output rendered/images
       - uses: actions/upload-artifact@v4
         with:
-          name: architecture-${{ matrix.project }}
+          name: architecture-${{ matrix.name }}
           path: rendered/
           if-no-files-found: error
           retention-days: 14
@@ -51,7 +81,7 @@ jobs:
           pattern: architecture-*
           path: generated
           merge-multiple: true
-      - name: Validate complete, matched source set
+      - name: Validate complete matched source set and material studies
         run: |
           python - <<'PY'
           import hashlib, json
@@ -66,6 +96,10 @@ jobs:
               for image in meta['renders']:
                   file=path.parent/image['file']
                   assert hashlib.sha256(file.read_bytes()).hexdigest()==image['sha256']
+          for key in ['oak','limestone','limewash']:
+              meta=json.loads(Path(f'generated/images/material-{key}.json').read_text())
+              image=meta['render']
+              assert hashlib.sha256(Path('generated/images',image['file']).read_bytes()).hexdigest()==image['sha256']
           PY
       - name: Publish original visualisations and Blender sources
         run: |
