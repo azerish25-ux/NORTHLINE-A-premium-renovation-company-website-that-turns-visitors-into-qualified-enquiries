@@ -50,7 +50,14 @@ async function images(page) {
     await page.screenshot({ path: path.join(evidence, 'material-space-hero.png') });
     for (const width of [320, 360, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      check(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'homepage fits ' + width + 'px');
+      // A viewport change is asynchronous in Chromium; inspect the settled layout.
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const overflow = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, viewport: innerWidth, nodes: [...document.body.querySelectorAll('*')].filter(node => node.getBoundingClientRect().right > innerWidth + 1).map(node => ({ tag: node.tagName, className: node.className, right: node.getBoundingClientRect().right })).slice(0, 30) }));
+      if (overflow.width > overflow.viewport + 1) {
+        fs.writeFileSync(path.join(evidence, 'overflow-' + width + '.json'), JSON.stringify(overflow, null, 2));
+        await page.screenshot({ path: path.join(evidence, 'overflow-' + width + '.png'), fullPage: true });
+      }
+      check(overflow.width <= overflow.viewport + 1, 'homepage fits ' + width + 'px');
       const touch = await page.locator('[data-material-target]').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height >= 48));
       check(touch, 'material touch targets remain at least 48px at ' + width + 'px');
     }

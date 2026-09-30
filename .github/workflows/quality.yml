@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash
 concurrency:
   group: northline-quality
   cancel-in-progress: true
@@ -39,8 +42,8 @@ jobs:
           find plugins theme -name '*.js' -print0 | xargs -0 -n1 node --check
           python tools/build-design.py
           git diff --exit-code -- theme/northline/assets/tokens.css
-          php tests/domain.php | tee evidence/domain.txt
-          php tests/design.php | tee evidence/design-markup.txt
+          php tests/domain.php 2>&1 | tee evidence/domain.txt
+          php tests/design.php 2>&1 | tee evidence/design-markup.txt
       - name: Install and test isolated WordPress
         env:
           NORTHLINE_TESTING: '1'
@@ -56,7 +59,7 @@ jobs:
           wp option update timezone_string America/Halifax --path=/tmp/northline-wp
           wp rewrite structure '/%postname%/' --path=/tmp/northline-wp
           wp northline seed --path=/tmp/northline-wp
-          wp eval-file "$PWD/tests/integration.php" --path=/tmp/northline-wp | tee evidence/wordpress-integration.txt
+          wp eval-file "$PWD/tests/integration.php" --path=/tmp/northline-wp 2>&1 | tee evidence/wordpress-integration.txt
           wp northline design-draft --path=/tmp/northline-wp
           wp core version --path=/tmp/northline-wp > evidence/wordpress-version.txt
       - name: Build preview and installable packages
@@ -78,8 +81,15 @@ jobs:
           php -S 127.0.0.1:8090 -t /tmp/northline-wp tools/test-router.php > evidence/wordpress-server.log 2>&1 &
           python -m http.server 8091 --bind 127.0.0.1 --directory preview > evidence/preview-server.log 2>&1 &
           for i in $(seq 1 30); do curl --fail --silent http://127.0.0.1:8090/ > /dev/null && curl --fail --silent http://127.0.0.1:8091/ > /dev/null && break; sleep 1; done
-          node tests/design.cjs | tee evidence/design-browser.txt
-          node tests/browser.cjs | tee evidence/browser.txt
+          node tests/design.cjs 2>&1 | tee evidence/design-browser.txt
+          node tests/browser.cjs 2>&1 | tee evidence/browser.txt
+          python - <<'PYVERIFY'
+          import json
+          from pathlib import Path
+          for name in ['design-results.json', 'browser-results.json']:
+              result=json.loads(Path('evidence', name).read_text())
+              assert result['status']=='passed' and result['assertions']>0
+          PYVERIFY
       - uses: actions/upload-artifact@v4
         if: always()
         with:

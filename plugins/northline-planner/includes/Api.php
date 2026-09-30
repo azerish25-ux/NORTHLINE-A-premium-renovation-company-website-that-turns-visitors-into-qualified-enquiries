@@ -61,7 +61,7 @@ final class Api
 
     private static function sameOrigin(\WP_REST_Request $request): bool
     {
-        $origin = rtrim($request->get_header('origin'), '/');
+        $origin = rtrim((string) $request->get_header('origin'), '/');
         if ($origin === '') {
             return true;
         }
@@ -88,7 +88,7 @@ final class Api
         if (!Database::rateLimit('submission', 12)) {
             return self::error('rate_limit', 'Too many submissions from this connection. Your draft is still here; please try later.', 429);
         }
-        $key = $request->get_header('idempotency-key');
+        $key = (string) $request->get_header('idempotency-key');
         if (!preg_match('/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/Di', $key)) {
             return self::error('key', 'A valid submission identifier is required.', 400);
         }
@@ -125,7 +125,7 @@ final class Api
         if ($row && current_user_can('manage_northline_enquiries')) {
             return true;
         }
-        $authorization = $request->get_header('authorization');
+        $authorization = (string) $request->get_header('authorization');
         $valid = preg_match('/^Bearer ([a-f0-9]{64})$/D', $authorization, $matches);
         if (!$row || !$valid || strtotime($row['expires_at'] . ' UTC') < time() || !hash_equals($row['token_hash'], hash('sha256', $matches[1]))) {
             return self::error('private', 'This private brief link is invalid or has expired. Please contact the studio with your reference.', 403);
