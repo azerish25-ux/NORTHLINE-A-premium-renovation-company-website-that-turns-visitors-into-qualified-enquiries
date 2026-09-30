@@ -27,14 +27,16 @@ jobs:
           echo "$expected  blender.tar.xz" | sha256sum --check
           tar -xf blender.tar.xz
           echo "$PWD/blender-4.2.15-linux-x64" >> "$GITHUB_PATH"
-      - name: Render matched camera pairs
-        run: blender -b -t 4 --python-exit-code 1 -P tools/render_architecture.py -- --project ${{ matrix.project }} --samples 96 --output rendered
+      - name: Render matched camera pairs and editable source scenes
+        run: |
+          blender -b -t 4 --python-exit-code 1 -P tools/render_architecture.py -- --project ${{ matrix.project }} --samples 96 --width 1920 --output rendered/images --blend-dir rendered/models --details
+          cp tools/render_architecture.py rendered/source-renderer.py
       - uses: actions/upload-artifact@v4
         with:
           name: architecture-${{ matrix.project }}
           path: rendered/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
   publish:
     needs: render
     runs-on: ubuntu-24.04
@@ -47,20 +49,39 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: architecture-*
-          path: theme/northline/assets/images
+          path: generated
           merge-multiple: true
-      - name: Publish original paired visualisations
+      - name: Validate complete, matched source set
         run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          records=list(Path('generated/images').glob('*-provenance.json'))
+          assert len(records)==6, 'All six houses are required'
+          assert len(list(Path('generated/models').glob('*.blend')))==6
+          for path in records:
+              meta=json.loads(path.read_text())
+              assert meta['revision']==2
+              assert meta['states']['before']==meta['states']['after']
+              for image in meta['renders']:
+                  file=path.parent/image['file']
+                  assert hashlib.sha256(file.read_bytes()).hexdigest()==image['sha256']
+          PY
+      - name: Publish original visualisations and Blender sources
+        run: |
+          mkdir -p creative/models theme/northline/assets/images
+          cp generated/images/* theme/northline/assets/images/
+          cp generated/models/*.blend creative/models/
           git config user.name 'NORTHLINE studio'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add theme/northline/assets/images
+          git add theme/northline/assets/images creative/models
           if ! git diff --cached --quiet; then
-            git commit -m 'art: publish six original matched architectural visualisation pairs'
+            git commit -m 'art: publish Material & Space renders and six editable Blender scenes'
             git pull --rebase origin main
             git push origin HEAD:main
           fi
       - uses: actions/upload-artifact@v4
         with:
-          name: northline-original-architecture
-          path: theme/northline/assets/images
+          name: northline-material-space-architecture
+          path: generated/
           retention-days: 14
